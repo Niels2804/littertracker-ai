@@ -1,4 +1,4 @@
-# 🧠 TrashTracker AI – Predictie API
+# 🧠 LitterTracker AI – Predictie API
 
 Dit project gebruikt **FastAPI** en **machine learning** om voorspellingen te doen op basis van JSON-data. Het is ontworpen om lokaal of in een Docker-container te draaien.
 
@@ -19,8 +19,8 @@ Dit project gebruikt **FastAPI** en **machine learning** om voorspellingen te do
 
 > Zorg dat je Python 3.12.5+ geïnstalleerd hebt.
 
-1. **Navigeer naar de map ```trashtracker-ai```**  
-   ```cd trashtracker-ai```
+1. **Navigeer naar de map ```littertracker-ai```**  
+   ```cd littertracker-ai```
 2. **Installeer alle requirements door de volgende commando in de terminal uit te voeren**
    ```pip install -r requirements.txt```
 3. **Voer de volgende commando in de terminal uit om de FastAPI uit te voeren**
