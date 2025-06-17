@@ -1,85 +1,158 @@
-﻿from fastapi import FastAPI
+﻿from datetime import datetime, timedelta
+import random
+from fastapi import FastAPI, Query
 import pandas as pd
-from pydantic import BaseModel
-import numpy as np
 import warnings
-from datetime import datetime, timedelta
-import random 
 
-# Machine Learning
+# Machine Learning imports
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.exceptions import ConvergenceWarning
 
-# Other
-from typing import List
-
-# Warnings
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
-# Initialize FastAPI
 app = FastAPI()
 
-# Input model
-class DateRange(BaseModel):
-    start_date: datetime
-    end_date: datetime
+# Generate realistic data for training the model
+def generate_data(n=1500):
+    monthTemp = {
+        1: 3.5, 2: 4.0, 3: 7.5, 4: 11.0, 5: 15.0, 6: 18.0,
+        7: 20.5, 8: 20.0, 9: 16.5, 10: 12.0, 11: 7.0, 12: 4.5
+    }
 
-# Dummy data
-df = pd.DataFrame({
-    "temperature": [20, 22, 25, 18, 17, 21],
-    "humidity": [50, 60, 55, 40, 45, 65],
-    "classification": [0, 1, 2, 3, 4, 5],
-    "amount": [10, 15, 12, 8, 6, 14]
-})
+    monthHumidity = {
+        1: 85, 2: 80, 3: 75, 4: 70, 5: 65, 6: 60,
+        7: 60, 8: 65, 9: 70, 10: 75, 11: 80, 12: 85
+    }
+
+    currentYear = datetime.now().year
+
+    features = {
+        "temperature": [],
+        "humidity": [],
+        "classification": [],
+        "amount": []
+    }
+
+    for _ in range(n):
+        randomDay = random.randint(1, 366)
+        date = datetime(currentYear, 1, 1) + timedelta(days=randomDay - 1)
+        month = date.month
+
+        baseTemp = monthTemp.get(month, 10)
+        temp = random.uniform(baseTemp - 3, baseTemp + 3)
+
+        baseHumidity = monthHumidity.get(month, 70)
+        humidity = random.uniform(baseHumidity - 10, baseHumidity + 10)
+        humidity = max(20, min(100, humidity))
+
+        classification = random.randint(0, 5)
+
+        baseAmounts = {
+            0: 4,  # paper
+            1: 10, # plastic (more common)
+            2: 7,  # biodegradable
+            3: 3,  # cardboard
+            4: 2,  # glass
+            5: 1   # metal (less common)
+        }
+
+        tempFactors = {
+            0: 0.02,  # paper (normal sensitivity to temp)
+            1: 0.05,  # plastic (high sensitivity to temp)
+            2: 0.05,  # biodegradable (high sensitivity to temp)
+            3: 0.01,  # cardboard (low sensitivity to temp)
+            4: 0.0,   # glass (depends not on temp)
+            5: 0.0    # metal (depends not on temp)
+        }
+
+        tempFactor = 1.0 + tempFactors[classification] * (temp - 20)
+
+        # Humidity factor limiting between 0.5 and 1.2
+        humidityFactor = 1.0 - 0.01 * (humidity - 50)
+        humidityFactor = max(0.5, min(1.2, humidityFactor))
+
+        amount = baseAmounts[classification] * tempFactor * humidityFactor
+        noise = random.uniform(0.8, 1.2)
+
+        amount = max(0, round(amount * noise, 2))
+
+        features["temperature"].append(round(temp, 2))
+        features["humidity"].append(round(humidity, 2))
+        features["classification"].append(classification)
+        features["amount"].append(amount)
+
+    return pd.DataFrame(features)
+
+# Machine Learning by using Random Forest Regressor
+
+# Generates 10.000 Dummy training data for model
+df = generate_data(10000) 
 
 X = df[["temperature", "humidity", "classification"]]
 y = df["amount"]
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
 model = RandomForestRegressor(n_estimators=100, random_state=42)
 model.fit(X_train, y_train)
 
-# Mapping classificaties
-class_map = {
-    0: "paper",
-    1: "plastic",
-    2: "biodegradable",
-    3: "cardboard",
-    4: "glass",
-    5: "metal"
-}
+# API Endpoints
 
+# Default endpoint to check if the API is working
 @app.get("/")
 def root():
-    return {"message": "API Aan"}
+    return {"message": "API is up and running!! ✅"}
 
-@app.post("/predict/")
-def predict_litter(date_range: DateRange):
-    start = date_range.start_date
-    end = date_range.end_date
+# Endpoint to predict litter based on start and end date (../predict?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD)
+@app.get("/predict/")
+def predictLitter(
+    startDate: datetime = Query(..., description="Begin date in format YYYY-MM-DD"),
+    endDate: datetime = Query(..., description="End date in format YYYY-MM-DD")
+):
+    if startDate > endDate:
+        return {"error": "Start date must be before or equal to end date"}
 
-    if start > end:
-        return {"error": "Startdatum moet vóór of gelijk zijn aan einddatum"}
+    monthTemp = {
+        1: 3.5, 2: 4.0, 3: 7.5, 4: 11.0, 5: 15.0, 6: 18.0,
+        7: 20.5, 8: 20.0, 9: 16.5, 10: 12.0, 11: 7.0, 12: 4.5
+    }
+    
+    monthHumidity = {
+        1: 85, 2: 80, 3: 75, 4: 70, 5: 65, 6: 60,
+        7: 60, 8: 65, 9: 70, 10: 75, 11: 80, 12: 85
+    }
 
-    delta = end - start
     results = []
 
-    for i in range(delta.days + 1):
-        date = start + timedelta(days=i)
+    days = (endDate - startDate).days + 1
 
-        # Simuleer features
-        temp = random.uniform(15, 30)
-        humidity = random.uniform(30, 70)
-        classification = random.randint(0, 5)
+    for i in range(days):
+        currentDate = startDate + timedelta(days=i)
+        month = currentDate.month
 
-        input_data = np.array([[temp, humidity, classification]])
-        prediction = model.predict(input_data)[0]
+        baseTemp = monthTemp.get(month, 15)
+        baseHumidity = monthHumidity.get(month, 70)
+
+        totalDetections = random.randint(3, 10)
+        totalPredictions = 0
+
+        for _ in range(totalDetections):
+            temp = random.uniform(baseTemp - 3, baseTemp + 3)
+            humidity = random.uniform(baseHumidity - 10, baseHumidity + 10)
+            humidity = max(20, min(100, humidity))  # begrens
+
+            classification = random.randint(0, 5)
+
+            inputData = pd.DataFrame([[temp, humidity, classification]], columns=["temperature", "humidity", "classification"])
+            prediction = model.predict(inputData)[0]
+
+            totalPredictions += prediction
 
         results.append({
-            "date": date.strftime("%Y-%m-%d"),
-            "classification": class_map[classification],
-            "predicted_amount": round(prediction, 2)
+            "date": currentDate.strftime("%Y-%m-%d"),
+            "predictedTotal": round(totalPredictions)
         })
 
     return {"predictions": results}
+
