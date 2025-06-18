@@ -1,5 +1,6 @@
 ﻿from datetime import datetime, timedelta
 import random
+from statistics import mean, stdev
 from fastapi import FastAPI, Query
 import pandas as pd
 import warnings
@@ -134,25 +135,33 @@ def predictLitter(
         baseTemp = monthTemp.get(month, 15)
         baseHumidity = monthHumidity.get(month, 70)
 
-        totalDetections = random.randint(3, 10)
-        totalPredictions = 0
+        confidence = 0
+        while confidence <= 0.75:
+            totalDetections = random.randint(3, 10)
+            dailyPredictions = []
 
-        for _ in range(totalDetections):
-            temp = random.uniform(baseTemp - 3, baseTemp + 3)
-            humidity = random.uniform(baseHumidity - 10, baseHumidity + 10)
-            humidity = max(20, min(100, humidity))  # begrens
+            for _ in range(totalDetections):
+                temp = random.uniform(baseTemp - 3, baseTemp + 3)
+                humidity = random.uniform(baseHumidity - 10, baseHumidity + 10)
+                humidity = max(20, min(100, humidity))
 
-            classification = random.randint(0, 5)
+                classification = random.randint(0, 5)
+                inputData = pd.DataFrame([[temp, humidity, classification]], columns=["temperature", "humidity", "classification"])
+                prediction = model.predict(inputData)[0]
+                dailyPredictions.append(prediction)
 
-            inputData = pd.DataFrame([[temp, humidity, classification]], columns=["temperature", "humidity", "classification"])
-            prediction = model.predict(inputData)[0]
+            predictedTotal = round(sum(dailyPredictions))
+            meanPrediction = mean(dailyPredictions)
+            stdDev = stdev(dailyPredictions) if len(dailyPredictions) > 1 else 0.0
+            confidence = max(0.0, 1.0 - (stdDev / meanPrediction)) if meanPrediction > 0 else 0.0
 
-            totalPredictions += prediction
-
+        # Pas als confidence > 0.5, voeg toe aan resultaten
         results.append({
             "date": currentDate.strftime("%Y-%m-%d"),
-            "predictedTotal": round(totalPredictions)
+            "predictedTotal": predictedTotal,
+            "confidence": round(confidence, 2)
         })
+
 
     return {"predictions": results}
 
