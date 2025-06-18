@@ -47,24 +47,28 @@ def generate_data(n=1500):
         humidity = random.uniform(baseHumidity - 10, baseHumidity + 10)
         humidity = max(20, min(100, humidity))
 
-        classification = random.randint(0, 5)
+        classification = random.randint(0, 7)
 
         baseAmounts = {
-            0: 4,  # paper
-            1: 10, # plastic (more common)
-            2: 7,  # biodegradable
-            3: 3,  # cardboard
-            4: 2,  # glass
-            5: 1   # metal (less common)
+            0: 1,  # battery
+            1: 3,  # cardboard
+            2: 2,  # glass
+            3: 2,  # metal
+            4: 5,  # organic
+            5: 4,  # paper
+            6: 8,  # plastic (much more common)
+            7: 3   # tissue
         }
 
         tempFactors = {
-            0: 0.02,  # paper (normal sensitivity to temp)
-            1: 0.05,  # plastic (high sensitivity to temp)
-            2: 0.05,  # biodegradable (high sensitivity to temp)
-            3: 0.01,  # cardboard (low sensitivity to temp)
-            4: 0.0,   # glass (depends not on temp)
-            5: 0.0    # metal (depends not on temp)
+            0: 0.01,  # battery (low effect)
+            1: 0.02,  # cardboard
+            2: 0.00,  # glass
+            3: 0.00,  # metal
+            4: 0.06,  # organic (high effect)
+            5: 0.03,  # paper
+            6: 0.05,  # plastic
+            7: 0.04   # tissue
         }
 
         tempFactor = 1.0 + tempFactors[classification] * (temp - 20)
@@ -145,7 +149,7 @@ def predictLitter(
                 humidity = random.uniform(baseHumidity - 10, baseHumidity + 10)
                 humidity = max(20, min(100, humidity))
 
-                classification = random.randint(0, 5)
+                classification = random.randint(0, 7)
                 inputData = pd.DataFrame([[temp, humidity, classification]], columns=["temperature", "humidity", "classification"])
                 prediction = model.predict(inputData)[0]
                 dailyPredictions.append(prediction)
