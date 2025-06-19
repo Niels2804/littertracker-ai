@@ -31,7 +31,8 @@ jobs:
           push: true
           tags: ghcr.io/niels2804/littertracker-ai:latest
 
-      - name: Trigger Coolify webhook
+      - name: Trigger Coolify deployment
         run: |
-          curl -X GET "${{ secrets.COOLIFY_WEBHOOK }}?image_tag=latest" \
-          -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
+          curl -k -X GET "${{ secrets.COOLIFY_WEBHOOK }}?image_tag=latest" \-H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
+
+     
