@@ -36,5 +36,5 @@ jobs:
 
       - name: Trigger Coolify webhook
         run: |
-          curl-k  -X GET "${{ secrets.COOLIFY_WEBHOOK }}?image_tag=latest" \
+          curl -k -X GET "${{ secrets.COOLIFY_WEBHOOK }}?image_tag=latest" \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
