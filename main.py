@@ -92,22 +92,35 @@ def generate_data(n=1500):
 # Machine Learning by using Random Forest Regressor
 
 # Generates 10.000 Dummy training data for model
-df = generate_data(10000) 
+def train_model():
+    # Generates 10.000 Dummy training data for model
+    df = generate_data(10000)
 
-X = df[["temperature", "humidity", "classification"]]
-y = df["amount"]
+    X = df[["temperature", "humidity", "classification"]]
+    y = df["amount"]
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-model = RandomForestRegressor(n_estimators=100, random_state=42)
-model.fit(X_train, y_train)
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
 
+train_model()
 # API Endpoints
 
 # Default endpoint to check if the API is working
 @app.get("/")
 def root():
     return {"message": "API is up and running!! ✅"}
+
+@app.get("/retrain")
+def retrain_model():
+    try:
+        train_model()
+        return {"message": "Model retrained successfully!"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 
 # Endpoint to predict litter based on start and end date (../predict?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD)
 @app.get("/predict/")
